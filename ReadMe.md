@@ -16,8 +16,11 @@ of the other with a gradient.
 * It uses *gl-matrix.js*, a library file, for the matrix manipulation.
 
 ### Lesson 3:
-* My code does not run.
-* I believe it does a rotating cube.
+* This needs to be run within a web browser. 
+  * If you open in plain Chrome, you will get a "DOM Exception... Cross Origin..."
+  * Explained in the video around 20:00.
+  * Run *python -m http.server 8000* then *open 0.0.0.0:8000*
+* It shows a rotating cube with a crate texture map.
 * Video is https://www.youtube.com/watch?v=hpnd11doMgc
 * *crate.png* is a flat image of the side of crate.
 * *gl-matrix.js* is a library as last time.

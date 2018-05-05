@@ -234,6 +234,10 @@ var InitDemo = function () {
         gl.RGBA,
         gl.UNSIGNED_BYTE,
         document.getElementById('crate-image')
+        /* If this causes a DOM Exception / Cross Origin, then you failed to run
+           inside a web browser.
+           If you "python -m http.server 8000" then "open 0.0.0.0:8000" it should work.
+         */
     );
     gl.bindTexture(gl.TEXTURE_2D, null); // unbind buffer after it is loaded in.
 
