@@ -24,3 +24,11 @@ of the other with a gradient.
 * Video is https://www.youtube.com/watch?v=hpnd11doMgc
 * *crate.png* is a flat image of the side of crate.
 * *gl-matrix.js* is a library as last time.
+
+### Lesson 4:
+* Video at https://www.youtube.com/watch?v=sM9n73-HiNA
+* Attempt to create a spinning monkey head.  
+* *markedmonkey.blend* is a simple *blender* model I created using the built
+in monkeyhead primitive shape and a mark up crayon on the left side of its face.
+* *markedmonkey.json* was converted using the online converter at *http://www.greentoken.de/onlineconv/*
+
