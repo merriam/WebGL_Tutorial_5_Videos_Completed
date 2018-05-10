@@ -12,7 +12,7 @@ const loadTextResource = function (url, callback) {
         }
     };
     request.send();
-}
+};
 
 const loadImage = function (url, callback) {
     const image = new Image();
