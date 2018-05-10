@@ -8,43 +8,47 @@
 
   Uses gl-matrix library
  */
-var vertexShaderText =  // Vertex shader sets pos and color of vertex.
-    [
-        'precision mediump float;',  // medium precision
-        '',
-        'attribute vec3 vertPosition;', // xyz position floats
-        'attribute vec2 vertTexCoord;', // 2d for texturing, (u, v)
-        'varying vec2 fragTexCoord;', // now passing texture coordinates
-        'uniform mat4 mWorld;',    // uniform is 'global to my GPU'.
-        'uniform mat4 mView;',      // mat4 is the gl-matrix 4 x 4 matrix
-        'uniform mat4 mProj;',
-        '',
-        'void main()',
-        '{',
-        '  fragTexCoord = vertTexCoord;',
-        '  gl_Position = mProj * mView * mWorld * vec4(vertPosition, 1.0);',
-        // So that's reverse order with the point at the end.
-        // point moved to world coordinates, to the cubes current position, and
-        // projected from camera into 2D.
-        '}'
-    ].join('\n');
 
-var fragmentShaderText =  // shades one triangle fragment
-    [
-        'precision mediump float;',
-        '',
-        'varying vec2 fragTexCoord;', // (u,v)
-        'uniform sampler2D sampler;', // this is just order, will be texture 0
-        '',
-        'void main()',
-        '{',
-        '  gl_FragColor = texture2D(sampler, fragTexCoord);',
-        '}'
-    ].join('\n');
+var mesh;
 
-var InitDemo = function () {
+const InitDemo = function () {
+    loadTextResource('/shader.vs.glsl', function (vsErr, vsText) {
+        if (vsErr) {
+            alert('Fatal error getting vertex shader (see console)');
+            console.error(vsErr);
+        } else {
+            loadTextResource('/shader.fs.glsl', function (fsErr, fsText) {
+                if (fsErr) {
+                    alert('Fatal error getting vertex shader (see console)');
+                    console.error(fsErr);
+                } else {
+                    loadJSONResource('./Susan.json', function (jsErr, modelObj) {
+                        if (jsErr) {
+                            alert('Fatal error getting model (see console)');
+                            console.error(jsErr);
+                        } else {
+                            loadImage('./SusanTexture.png', function (imgErr, imgData) {
+                                if (imgErr) {
+                                    alert('Fatal error in loading texture image (see console)');
+                                    console.error(imgErr);
+                                } else {
+                                    RunDemo(vsText, fsText, imgData, modelObj);
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+        }
+    });
+};
+
+var RunDemo = function (vertexShaderText, fragmentShaderText, textureImg, modelObj) {
     console.log("The demo called InitDemo");
+    const modelMesh = modelObj.meshes[0];
+    mesh = modelMesh;  // a global for easier development
 
+    //> Init WebGL
     var canvas = document.getElementById('the-canvas');
     var gl = canvas.getContext('webgl');
     if (!gl) {
@@ -62,8 +66,10 @@ var InitDemo = function () {
     gl.enable(gl.CULL_FACE);
     gl.cullFace(gl.BACK); // cull the back face, or use gl.FRONT for more fun
     gl.frontFace(gl.CCW);
+    //<
 
 
+    //> Init vertex and fragment shaders
     var vertexShader = gl.createShader(gl.VERTEX_SHADER);
     var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 
@@ -94,154 +100,69 @@ var InitDemo = function () {
     if (!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
         console.error('ERROR validating program!', gl.getProgramParameter(program));
     }
+    //<
 
-    //
-    // Create buffer
-    //
-    var triangleVertices =
-        [ // x,y,z,    r,g,b
-            0.0, 0.5, 0.0, 1.0, 1.0, 0.0,
-            -0.5, -0.5, 0.0, 0.7, 0.0, 1.0, // counter clockwise
-            0.5, -0.5, 0.0, 0.1, 1.0, 0.6
-        ];
+    //> Create buffers for model
+    var modelVertices = modelMesh.vertices;
 
-    // cube list of points.  2 triangles per face, one color per face.
-    // stored as four points per face, with colors, and then a vertex list.
-    // odd choice, but ok.
-    var cubeVertices =
-        [ // X, Y, Z            U, V
-            // Top
-            -1.0, 1.0, -1.0, 0, 0,
-            -1.0, 1.0, 1.0, 0, 1,
-            1.0, 1.0, 1.0, 1, 1,
-            1.0, 1.0, -1.0, 1, 0,
+    var modelIndices = [].concat.apply([], modelMesh.faces);
+    // indices flattened from [ [1,2,3], [1, 2, 4] ..] to [1,2,3,1,2,4,...]
 
-            // Left
-            -1.0, 1.0, 1.0, 0, 0,
-            -1.0, -1.0, 1.0, 1, 0,
-            -1.0, -1.0, -1.0, 1, 1,
-            -1.0, 1.0, -1.0, 0, 1,
+    var modelTexCoords = modelMesh.texturecoords[0];
 
-            // Right
-            1.0, 1.0, 1.0, 1, 1,
-            1.0, -1.0, 1.0, 1, 0,
-            1.0, -1.0, -1.0, 0, 0,
-            1.0, 1.0, -1.0, 0, 1,
+    var modelPosVertexBufferObject = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, modelPosVertexBufferObject);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(modelVertices), gl.STATIC_DRAW);
 
-            // Front
-            1.0, 1.0, 1.0, 1, 1,
-            1.0, -1.0, 1.0, 1, 0,
-            -1.0, -1.0, 1.0, 0, 0,
-            -1.0, 1.0, 1.0, 0, 1,
+    var modelTexCoordsBufferObject = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, modelTexCoordsBufferObject);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(modelTexCoords), gl.STATIC_DRAW);
 
-            // Back
-            1.0, 1.0, -1.0, 0, 0,
-            1.0, -1.0, -1.0, 0, 1,
-            -1.0, -1.0, -1.0, 1, 1,
-            -1.0, 1.0, -1.0, 1, 0,
+    var modelIndexBufferObject = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, modelIndexBufferObject);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(modelIndices), gl.STATIC_DRAW);
 
-            // Bottom
-            -1.0, -1.0, -1.0, 1, 1,
-            -1.0, -1.0, 1.0, 1, 0,
-            1.0, -1.0, 1.0, 0, 0,
-            1.0, -1.0, -1.0, 0, 1
-        ];
-
-    var cubeIndices =
-        [
-            // Top
-            0, 1, 2,
-            0, 2, 3,
-
-            // Left
-            5, 4, 6,
-            6, 4, 7,
-
-            // Right
-            8, 9, 10,
-            8, 10, 11,
-
-            // Front
-            13, 12, 14,
-            15, 14, 12,
-
-            // Back
-            16, 17, 18,
-            16, 18, 19,
-
-            // Bottom
-            21, 20, 22,
-            22, 20, 23
-        ];
-
-    // var triangleVertices =
-    //     [ // x,y,z,    r,g,b
-    //         0.0, 0.5, 0.0,     1.0, 1.0, 0.0,
-    //         -0.5, -0.5, 0.0,   0.7, 0.0, 1.0, // counter clockwise
-    //         0.5, -0.5, 0.0,    0.1, 1.0, 0.6,
-    //         0.5, 0.1666, 0.0,  1.0, 0.1, 0.3,
-    //         -0.5, 0.1666, 0.0, 0.1, 1.0, 0.1,
-    //         0.0, -0.8333, 0.0, 0.6, 0.6, 1.0
-    //     ];
-
-    var triangleVertexBufferObject = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexBufferObject);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(triangleVertices), gl.STATIC_DRAW);
-
-    var cubeVertexBufferObject = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexBufferObject);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cubeVertices), gl.STATIC_DRAW);
-
-    var cubeIndexBufferObject = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeIndexBufferObject);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(cubeIndices), gl.STATIC_DRAW);
-
-
+    //> bind vertices
+    gl.bindBuffer(gl.ARRAY_BUFFER, modelPosVertexBufferObject);
     var positionAttribLocation = gl.getAttribLocation(program, 'vertPosition');
-    var texCoordAttribLocation = gl.getAttribLocation(program, 'vertTexCoord');
-
     gl.vertexAttribPointer(
         positionAttribLocation,  // location, or index into attributes of shader
         3, // per attribute
         gl.FLOAT, // element type
         gl.FALSE,  // not normalized, tbd
-        5 * Float32Array.BYTES_PER_ELEMENT, // Size of individual vertext
+        3 * Float32Array.BYTES_PER_ELEMENT, // Size of individual vertext
         0 // Offset from the beginning of a single vertex to this attribute
     );
+    gl.enableVertexAttribArray(positionAttribLocation);
+    //<
+
+    //> bind texture coords
+    gl.bindBuffer(gl.ARRAY_BUFFER, modelTexCoordsBufferObject);
+    var texCoordAttribLocation = gl.getAttribLocation(program, 'vertTexCoord');
     gl.vertexAttribPointer(
         texCoordAttribLocation,  // location, or index into attributes of shader
         2, // per attribute
         gl.FLOAT, // element type
         gl.FALSE,  // not normalized, tbd
-        5 * Float32Array.BYTES_PER_ELEMENT, // Size of individual vertext
-        3 * Float32Array.BYTES_PER_ELEMENT // Offset from the beginning of a single vertex to this attribute
+        2 * Float32Array.BYTES_PER_ELEMENT, // Size of individual vertext
+        0 // Offset from the beginning of a single vertex to this attribute
     );
-
-    gl.enableVertexAttribArray(positionAttribLocation);
     gl.enableVertexAttribArray(texCoordAttribLocation);
+    //<
 
-    // create texture
-    var boxTexture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, boxTexture);
+    //> create texture
+    var modelTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, modelTexture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true); // set this prop to true
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); // (s,t) same as (u,v)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-
-    gl.texImage2D(gl.TEXTURE_2D,
-        0, // level of detail
-        gl.RGBA,
-        gl.RGBA,
-        gl.UNSIGNED_BYTE,
-        document.getElementById('crate-image')
-        /* If this causes a DOM Exception / Cross Origin, then you failed to run
-           inside a web browser.
-           If you "python -m http.server 8000" then "open 0.0.0.0:8000" it should work.
-         */
-    );
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureImg);
     gl.bindTexture(gl.TEXTURE_2D, null); // unbind buffer after it is loaded in.
 
 
+    //> set main program
     gl.useProgram(program);  // tell open gl we use this program, as needed for uniformMatrix4fv
 
     var matWorldUniformLocation = gl.getUniformLocation(program, "mWorld");
@@ -253,8 +174,8 @@ var InitDemo = function () {
     var projMatrix = new Float32Array(16);
 
     mat4.identity(worldMatrix);  // graphics code often does mutate-in-place
-    mat4.lookAt(viewMatrix, [2, 2, -5], [0, 0, 0], [0, 1, 0]);  // look from eye=underneath, center=center, up=+y
-    mat4.perspective(projMatrix, glMatrix.toRadian(45), canvas.width / canvas.height, 0.1, 1000.0);
+    mat4.lookAt(viewMatrix, [0, 0, -8], [0, 0, 0], [0, 1, 0]);
+    mat4.perspective(projMatrix, glMatrix.toRadian(45), canvas.clientWidth / canvas.clientHeight, 0.1, 1000.0);
 
     gl.uniformMatrix4fv(   // This is where we watch for magic, or bad things happen.
         matWorldUniformLocation,   // The position we had
@@ -262,7 +183,7 @@ var InitDemo = function () {
         worldMatrix);   // must be correct type
     gl.uniformMatrix4fv(matViewUniformLocation, gl.FALSE, viewMatrix);
     gl.uniformMatrix4fv(matProjUniformLocation, gl.FALSE, projMatrix);
-
+    //<
 
     //
     // Main render loop
@@ -286,11 +207,10 @@ var InitDemo = function () {
         gl.clearColor(0.75, .85, 0.8, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        gl.bindTexture(gl.TEXTURE_2D, boxTexture);
+        gl.bindTexture(gl.TEXTURE_2D, modelTexture);
         gl.activeTexture(gl.TEXTURE0);
 
-        // gl.drawArrays(gl.TRIANGLES, 0, 3);  // with current bound buffer, draw skipping 0, 3 triangles
-        gl.drawElements(gl.TRIANGLES, cubeIndices.length, gl.UNSIGNED_SHORT, 0);
+        gl.drawElements(gl.TRIANGLES, modelIndices.length, gl.UNSIGNED_SHORT, 0);
         // so use elements, all the index points, index numbers are unsigned shorts, skip 0
         requestAnimationFrame(loop);
     };
