@@ -32,3 +32,6 @@ of the other with a gradient.
 in monkeyhead primitive shape and a mark up crayon on the left side of its face.
 * *markedmonkey.json* was converted using the online converter at *http://www.greentoken.de/onlineconv/*
 
+### Lesson 5:
+* Video at https://www.youtube.com/watch?v=33gn3_khXxw&pbjreload=10
+* Attempt to make shaded monkey head.
