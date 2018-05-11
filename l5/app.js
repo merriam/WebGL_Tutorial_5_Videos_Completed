@@ -9,11 +9,9 @@
   Uses gl-matrix library
  */
 
-import * as mat4 from "./gl-matrix";
+var mesh;
 
-let mesh;
-
-const InitDemo = function () {   // called from index.html
+var InitDemo = function () {  // called from index.html
     loadTextResource('/shader.vs.glsl', function (vsErr, vsText) {
         if (vsErr) {
             alert('Fatal error getting vertex shader (see console)');
@@ -45,14 +43,14 @@ const InitDemo = function () {   // called from index.html
     });
 };
 
-const RunDemo = function (vertexShaderText, fragmentShaderText, textureImg, modelObj) {
+var RunDemo = function (vertexShaderText, fragmentShaderText, textureImg, modelObj) {
     console.log("The demo called InitDemo");
     const modelMesh = modelObj.meshes[0];
     mesh = modelMesh;  // a global for easier development
 
     //> Init WebGL
-    const canvas = document.getElementById('the-canvas');
-    let gl = canvas.getContext('webgl');
+    var canvas = document.getElementById('the-canvas');
+    var gl = canvas.getContext('webgl');
     if (!gl) {
         console.log('WebGL not supported, falling back to experimental-webgl');
         gl = canvas.getContext('experimental-webgl');
@@ -72,8 +70,8 @@ const RunDemo = function (vertexShaderText, fragmentShaderText, textureImg, mode
 
 
     //> Init vertex and fragment shaders
-    const vertexShader = gl.createShader(gl.VERTEX_SHADER);
-    const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+    var vertexShader = gl.createShader(gl.VERTEX_SHADER);
+    var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 
     gl.shaderSource(vertexShader, vertexShaderText);
     gl.shaderSource(fragmentShader, fragmentShaderText);
@@ -89,7 +87,7 @@ const RunDemo = function (vertexShaderText, fragmentShaderText, textureImg, mode
         return;
     }
 
-    const program = gl.createProgram();
+    var program = gl.createProgram();
     gl.attachShader(program, vertexShader);
     gl.attachShader(program, fragmentShader);
     gl.linkProgram(program);
@@ -100,33 +98,37 @@ const RunDemo = function (vertexShaderText, fragmentShaderText, textureImg, mode
 
     gl.validateProgram(program);  // magic extra checking
     if (!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
-        console.error('ERROR validating program!', gl.getProgramParameter(program, gl.VALIDATE_STATUS));
+        console.error('ERROR validating program!', gl.getProgramParameter(program));
     }
     //<
 
     //> Create buffers for model
-    const modelVertices = modelMesh.vertices;
-
-    const modelIndices = [].concat.apply([], modelMesh.faces);
+    var modelVertices = modelMesh.vertices;
+    var modelIndices = [].concat.apply([], modelMesh.faces);
     // indices flattened from [ [1,2,3], [1, 2, 4] ..] to [1,2,3,1,2,4,...]
+    var modelTexCoords = modelMesh.texturecoords[0];
+    const modelNormals = modelMesh.normals;
 
-    const modelTexCoords = modelMesh.texturecoords[0];
-
-    const modelPosVertexBufferObject = gl.createBuffer();
+    var modelPosVertexBufferObject = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, modelPosVertexBufferObject);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(modelVertices), gl.STATIC_DRAW);
 
-    const modelTexCoordsBufferObject = gl.createBuffer();
+    var modelTexCoordsBufferObject = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, modelTexCoordsBufferObject);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(modelTexCoords), gl.STATIC_DRAW);
 
-    const modelIndexBufferObject = gl.createBuffer();
+    var modelIndexBufferObject = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, modelIndexBufferObject);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(modelIndices), gl.STATIC_DRAW);
 
+    const modelNormalBufferObject = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, modelNormalBufferObject);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(modelNormals), gl.STATIC_DRAW);
+
+
     //> bind vertices
     gl.bindBuffer(gl.ARRAY_BUFFER, modelPosVertexBufferObject);
-    const positionAttribLocation = gl.getAttribLocation(program, 'vertPosition');
+    var positionAttribLocation = gl.getAttribLocation(program, 'vertPosition');
     gl.vertexAttribPointer(
         positionAttribLocation,  // location, or index into attributes of shader
         3, // per attribute
@@ -140,7 +142,7 @@ const RunDemo = function (vertexShaderText, fragmentShaderText, textureImg, mode
 
     //> bind texture coords
     gl.bindBuffer(gl.ARRAY_BUFFER, modelTexCoordsBufferObject);
-    const texCoordAttribLocation = gl.getAttribLocation(program, 'vertTexCoord');
+    var texCoordAttribLocation = gl.getAttribLocation(program, 'vertTexCoord');
     gl.vertexAttribPointer(
         texCoordAttribLocation,  // location, or index into attributes of shader
         2, // per attribute
@@ -152,8 +154,20 @@ const RunDemo = function (vertexShaderText, fragmentShaderText, textureImg, mode
     gl.enableVertexAttribArray(texCoordAttribLocation);
     //<
 
+    gl.bindBuffer(gl.ARRAY_BUFFER, modelNormalBufferObject);
+    const normalLoc = gl.getAttribLocation(program, 'vertNormal');
+    gl.vertexAttribPointer(
+        normalLoc,
+        3,
+        gl.FLOAT,
+        gl.TRUE,  // I think this is 'do the normalization', but already normalized
+        3 * Float32Array.BYTES_PER_ELEMENT,
+        0
+    );
+    gl.enableVertexAttribArray(normalLoc);
+
     //> create texture
-    const modelTexture = gl.createTexture();
+    var modelTexture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, modelTexture);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true); // set this prop to true
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -162,22 +176,30 @@ const RunDemo = function (vertexShaderText, fragmentShaderText, textureImg, mode
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureImg);
     gl.bindTexture(gl.TEXTURE_2D, null); // unbind buffer after it is loaded in.
+    //<
 
+
+
+    //  vec3 ambientLightIntensity = vec3(0.3, 0.3, 0.3); // soft bluish ambient
+//  vec3 sunlightIntensity = vec3(0.9, 0.9, 0.9); // whitish yellow light
+//  vec3 sunlightDirection = normalize(vec3(1.0, 4.0, 0.0)); // mostly down, some right, (no z)?
+
+    //<
 
     //> set main program
     gl.useProgram(program);  // tell open gl we use this program, as needed for uniformMatrix4fv
 
-    const matWorldUniformLocation = gl.getUniformLocation(program, "mWorld");
-    const matViewUniformLocation = gl.getUniformLocation(program, "mView");
-    const matProjUniformLocation = gl.getUniformLocation(program, "mProj");
+    var matWorldUniformLocation = gl.getUniformLocation(program, "mWorld");
+    var matViewUniformLocation = gl.getUniformLocation(program, "mView");
+    var matProjUniformLocation = gl.getUniformLocation(program, "mProj");
 
-    const worldMatrix = new Float32Array(16);
-    const viewMatrix = new Float32Array(16);
-    const projMatrix = new Float32Array(16);
+    var worldMatrix = new Float32Array(16);
+    var viewMatrix = new Float32Array(16);
+    var projMatrix = new Float32Array(16);
 
     mat4.identity(worldMatrix);  // graphics code often does mutate-in-place
     mat4.lookAt(viewMatrix, [0, 0, -8], [0, 0, 0], [0, 1, 0]);
-    mat4.perspective(projMatrix, mat4.toRadian(45), canvas.clientWidth / canvas.clientHeight, 0.1, 1000.0);
+    mat4.perspective(projMatrix, glMatrix.toRadian(45), canvas.clientWidth / canvas.clientHeight, 0.1, 1000.0);
 
     gl.uniformMatrix4fv(   // This is where we watch for magic, or bad things happen.
         matWorldUniformLocation,   // The position we had
@@ -187,16 +209,30 @@ const RunDemo = function (vertexShaderText, fragmentShaderText, textureImg, mode
     gl.uniformMatrix4fv(matProjUniformLocation, gl.FALSE, projMatrix);
     //<
 
+    var xRotationMatrix = new Float32Array(16);
+    var yRotationMatrix = new Float32Array(16);
+
+    //> lighting information
+    gl.useProgram(program);
+    var ui_ambient = gl.getUniformLocation(program, 'ambientLightIntensity');
+    var u_sunlightDirection = gl.getUniformLocation(program, 'sunlightDirection');
+    var ui_sunlight = gl.getUniformLocation(program, 'sunlightIntensity');
+
+    gl.uniform3f(ui_ambient, 0.2, 0.2, 0.2);  // soft ambient
+    gl.uniform3f(u_sunlightDirection, .6, .8, -0.4);  // normalized.fsdsa
+    gl.uniform3f(ui_sunlight, 0.9, 0.9, 0.9);
+    //<
+
     //
     // Main render loop
     //
-    const identityMatrix = new Float32Array(16);
+    var identityMatrix = new Float32Array(16);
     mat4.identity(identityMatrix);
 
-    let angle = 0; // keep allocating variables outside of animation loop
-    const xRotationMatrix = new Float32Array(16);
-    const yRotationMatrix = new Float32Array(16);
-    const loop = function () {
+    var angle = 0; // keep allocating variables outside of animation loop
+    var xRotationMatrix = new Float32Array(16);
+    var yRotationMatrix = new Float32Array(16);
+    var loop = function () {
         angle = performance.now() / 1000 / 6 * 2 * Math.PI;
         // (ms since ap start) / (1000 ms/sec) * (1/6 of a full rotation)
         // aka a full rotation every 6 seconds
