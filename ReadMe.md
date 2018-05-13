@@ -34,4 +34,6 @@ in monkeyhead primitive shape and a mark up crayon on the left side of its face.
 
 ### Lesson 5:
 * Video at https://www.youtube.com/watch?v=33gn3_khXxw&pbjreload=10
-* Attempt to make shaded monkey head.
+* Make shaded monkey head using.
+* Uses single lighting source and ambient lighting.  No specular lighting.
+
